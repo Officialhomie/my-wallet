@@ -28,19 +28,26 @@ const TEST_MNEMONIC = process.env.TEST_MNEMONIC ||
 
 console.log('🚀 Starting Wallet Farm API Server...');
 
+// CORS configuration - supports environment variable for production
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:3002'];
+
+console.log('🌐 Allowed CORS origins:', allowedOrigins);
+
 // Create Express app and HTTP server
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:3002"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3002'],
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
