@@ -1,0 +1,59 @@
+{
+  "name": "wallet-farm",
+  "version": "1.0.0",
+  "description": "HD Wallet Farm for EVM Smart Contract Testing & Interaction Simulation",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "node --watch examples/basic-setup.js",
+    "test": "node --test tests/",
+    "test:watch": "node --test --watch tests/",
+    "lint": "eslint src/ tests/ examples/ scripts/",
+    "format": "prettier --write src/ tests/ examples/ scripts/",
+    "setup": "npm install && npm run copy-env",
+    "copy-env": "cp .env.example .env || echo 'Environment file setup'",
+    "derive:wallets": "node scripts/01-deriveWallets.js",
+    "fund:wallets": "node scripts/02-fundWallets.js",
+    "simulate:interactions": "node scripts/03-simulateInteractions.js",
+    "deploy:contracts": "node scripts/04-deployTestContracts.js",
+    "check:balances": "node scripts/05-checkBalances.js",
+    "generate:report": "node scripts/06-generateReport.js",
+    "examples:basic": "node examples/basic-setup.js",
+    "examples:funding": "node examples/fund-distribution.js",
+    "examples:network": "node examples/network-connection.js",
+    "examples:simulation": "node examples/behavioral-simulation.js",
+    "examples:workflow": "node examples/complete-workflow.js"
+  },
+  "keywords": [
+    "wallet",
+    "farm",
+    "testing",
+    "evm",
+    "hardhat",
+    "ethers",
+    "blockchain",
+    "ethereum"
+  ],
+  "author": "Wallet Farm Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.0"
+  },
+  "dependencies": {
+    "ethers": "^6.10.0",
+    "dotenv": "^16.3.1",
+    "chalk": "^5.3.0",
+    "bip39": "^3.1.0",
+    "node-cron": "^3.0.3"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./core": "./src/core/index.js",
+    "./utils": "./src/utils/index.js"
+  }
+}
