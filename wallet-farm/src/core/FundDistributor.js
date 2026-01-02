@@ -87,42 +87,32 @@ export class FundDistributor {
     // Validate funding wallet balance
     await this.#validateFundingBalance(amountPerWallet, wallets.size, strategy, chainName, false);
 
-    // Process wallets in batches to avoid overwhelming the network
+    // Process wallets sequentially to avoid nonce conflicts
     const walletIndices = Array.from(wallets.keys());
-    const batches = this.#createBatches(walletIndices, opts.batchSize);
 
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
+    for (let i = 0; i < walletIndices.length; i++) {
+      const walletIndex = walletIndices[i];
 
-      if (opts.verbose && batches.length > 1) {
-        console.log(chalk.gray(`   Processing batch ${i + 1}/${batches.length} (${batch.length} wallets)`));
+      if (opts.verbose) {
+        console.log(chalk.gray(`   Processing wallet ${i + 1}/${walletIndices.length} (index: ${walletIndex})`));
       }
 
-      const batchPromises = batch.map(walletIndex =>
-        this.#distributeToWallet(walletIndex, amountPerWallet, chainName, strategy, opts)
-      );
+      try {
+        const result = await this.#distributeToWallet(walletIndex, amountPerWallet, chainName, strategy, opts);
+        results.push(result);
+      } catch (error) {
+        results.push({
+          walletIndex,
+          address: wallets.get(walletIndex).address,
+          success: false,
+          error: error.message,
+          timestamp: Date.now()
+        });
+      }
 
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      // Process results
-      batchResults.forEach((result, index) => {
-        const walletIndex = batch[index];
-        if (result.status === 'fulfilled') {
-          results.push(result.value);
-        } else {
-          results.push({
-            walletIndex,
-            address: wallets.get(walletIndex).address,
-            success: false,
-            error: result.reason.message,
-            timestamp: Date.now()
-          });
-        }
-      });
-
-      // Delay between batches (except for the last one)
-      if (i < batches.length - 1 && opts.humanDelay) {
-        await this.#humanDelay(2000, 5000);
+      // Small delay between transactions to be respectful to the network
+      if (i < walletIndices.length - 1 && opts.humanDelay) {
+        await this.#humanDelay(500, 1500);
       }
     }
 
@@ -205,42 +195,32 @@ export class FundDistributor {
     const decimals = await this.#getTokenDecimals(token);
     await this.#validateFundingBalance(amountPerWallet, wallets.size, strategy, chainName, true, token);
 
-    // Process wallets in batches
+    // Process wallets sequentially to avoid nonce conflicts
     const walletIndices = Array.from(wallets.keys());
-    const batches = this.#createBatches(walletIndices, opts.batchSize);
 
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
+    for (let i = 0; i < walletIndices.length; i++) {
+      const walletIndex = walletIndices[i];
 
-      if (opts.verbose && batches.length > 1) {
-        console.log(chalk.gray(`   Processing batch ${i + 1}/${batches.length} (${batch.length} wallets)`));
+      if (opts.verbose) {
+        console.log(chalk.gray(`   Processing wallet ${i + 1}/${walletIndices.length} (index: ${walletIndex})`));
       }
 
-      const batchPromises = batch.map(walletIndex =>
-        this.#distributeERC20ToWallet(walletIndex, token, amountPerWallet, decimals, chainName, strategy, opts)
-      );
+      try {
+        const result = await this.#distributeERC20ToWallet(walletIndex, token, amountPerWallet, decimals, chainName, strategy, opts);
+        results.push(result);
+      } catch (error) {
+        results.push({
+          walletIndex,
+          address: wallets.get(walletIndex).address,
+          success: false,
+          error: error.message,
+          timestamp: Date.now()
+        });
+      }
 
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      // Process results
-      batchResults.forEach((result, index) => {
-        const walletIndex = batch[index];
-        if (result.status === 'fulfilled') {
-          results.push(result.value);
-        } else {
-          results.push({
-            walletIndex,
-            address: wallets.get(walletIndex).address,
-            success: false,
-            error: result.reason.message,
-            timestamp: Date.now()
-          });
-        }
-      });
-
-      // Delay between batches
-      if (i < batches.length - 1 && opts.humanDelay) {
-        await this.#humanDelay(2000, 5000);
+      // Small delay between transactions to be respectful to the network
+      if (i < walletIndices.length - 1 && opts.humanDelay) {
+        await this.#humanDelay(500, 1500);
       }
     }
 
