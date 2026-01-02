@@ -1,0 +1,12 @@
+# Nixpacks Configuration for Wallet Farm Backend
+# This file ensures Railway builds from the correct directory (wallet-farm/)
+# and excludes development-only Hardhat tooling from production deployment
+
+[phases.setup]
+nixPkgs = ["nodejs_18"]
+
+[phases.install]
+cmds = ["cd wallet-farm && npm ci --omit=dev"]
+
+[start]
+cmd = "cd wallet-farm && npm run server"

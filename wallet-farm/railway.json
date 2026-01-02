@@ -1,10 +1,11 @@
 {
+  "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd wallet-farm && npm install"
+    "buildCommand": "npm ci --omit=dev"
   },
   "deploy": {
-    "startCommand": "cd wallet-farm && npm run server",
+    "startCommand": "npm run server",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
