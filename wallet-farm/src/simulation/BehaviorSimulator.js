@@ -16,8 +16,14 @@ export class BehaviorSimulator {
     }
 
     this.walletFarm = walletFarm;
-    this.timingEngine = new TimingEngine(options.timing);
-    this.userArchetypes = new UserArchetypes(options.archetypes);
+
+    // Share RNG between components for deterministic behavior
+    const sharedRng = options.rng || new SeededRandom();
+    this.timingEngine = new TimingEngine(sharedRng);
+    this.userArchetypes = new UserArchetypes({
+      ...options.archetypes,
+      rng: sharedRng
+    });
 
     this.options = {
       verbose: options.verbose || false,
