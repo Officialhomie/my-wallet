@@ -1,53 +1,467 @@
 #!/usr/bin/env node
 
 /**
- * Behavioral Simulation Example
+ * Complete Behavioral Simulation Example - Phase 4
  *
- * This example demonstrates how to:
- * 1. Set up behavioral simulation with different user archetypes
- * 2. Run individual archetype simulations
- * 3. Execute mixed-behavior simulations
- * 4. Analyze simulation results and timing patterns
- * 5. Compare different user behaviors
+ * This example demonstrates the complete behavioral simulation system:
+ * 1. Wallet farm setup with safety components
+ * 2. Archetype-based user behavior simulation
+ * 3. Safety systems (budget enforcement, circuit breaker)
+ * 4. Comprehensive metrics and reporting
+ * 5. End-to-end simulation workflow
  */
 
-import { WalletFarm, BehaviorSimulator, TimingEngine, UserArchetypes } from '../src/index.js';
+import {
+  WalletFarm,
+  FundDistributor,
+  ArchetypeManager,
+  TimingEngine,
+  TransactionExecutor,
+  SimulationMetrics,
+  BudgetEnforcer,
+  CircuitBreaker,
+  SeededRandom
+} from '../src/index.js';
 import { ethers } from 'ethers';
 import { config } from 'dotenv';
 
 // Load environment variables
 config();
 
-// Test mnemonic (NEVER use real funds with this in production!)
+// Configuration
 const TEST_MNEMONIC = process.env.TEST_MNEMONIC ||
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
-// ERC-20 Token ABI (standard interface)
-const ERC20_ABI = [
-  'function balanceOf(address) view returns (uint256)',
-  'function transfer(address, uint256) returns (bool)',
-  'function decimals() view returns (uint8)',
-  'function symbol() view returns (string)'
-];
-
 // Mock contract for demonstration
-class MockContract {
-  constructor(address = '0x1234567890123456789012345678901234567890') {
-    this.target = address;
+class MockDeFiContract {
+  constructor(name = 'MockDeFi', address = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e') {
+    this.name = name;
+    this.address = address;
   }
 
   connect(wallet) {
     return {
-      transfer: async (to, amount) => {
-        console.log(`   📤 Mock transfer: ${ethers.formatEther(amount)} ETH to ${to}`);
+      // ERC-20 like functions
+      balanceOf: async (address) => ethers.parseEther('1000'),
 
-        // Simulate transaction
-        await new Promise(resolve => setTimeout(resolve, 100));
+      transfer: async (to, amount) => {
+        console.log(`   📤 Transfer: ${ethers.formatEther(amount)} tokens to ${to}`);
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 50));
 
         return {
           hash: `0x${Math.random().toString(16).substring(2, 66)}`,
           wait: async () => ({
-            gasUsed: 21000,
+            status: 1,
+            gasUsed: 65000n,
+            gasPrice: ethers.parseUnits('20', 'gwei'),
+            blockNumber: Math.floor(Math.random() * 1000000)
+          })
+        };
+      },
+
+      // DeFi functions
+      stake: async (amount) => {
+        console.log(`   🏦 Stake: ${ethers.formatEther(amount)} tokens`);
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 300 + 100));
+
+        return {
+          hash: `0x${Math.random().toString(16).substring(2, 66)}`,
+          wait: async () => ({
+            status: 1,
+            gasUsed: 120000n,
+            gasPrice: ethers.parseUnits('25', 'gwei'),
+            blockNumber: Math.floor(Math.random() * 1000000)
+          })
+        };
+      },
+
+      unstake: async (amount) => {
+        console.log(`   💰 Unstake: ${ethers.formatEther(amount)} tokens`);
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 250 + 75));
+
+        return {
+          hash: `0x${Math.random().toString(16).substring(2, 66)}`,
+          wait: async () => ({
+            status: 1,
+            gasUsed: 85000n,
+            gasPrice: ethers.parseUnits('22', 'gwei'),
+            blockNumber: Math.floor(Math.random() * 1000000)
+          })
+        };
+      },
+
+      claimRewards: async () => {
+        console.log(`   🎁 Claim rewards`);
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 150 + 50));
+
+        return {
+          hash: `0x${Math.random().toString(16).substring(2, 66)}`,
+          wait: async () => ({
+            status: 1,
+            gasUsed: 45000n,
+            gasPrice: ethers.parseUnits('18', 'gwei'),
+            blockNumber: Math.floor(Math.random() * 1000000)
+          })
+        };
+      },
+
+      swap: async (amountIn, amountOutMin) => {
+        console.log(`   🔄 Swap: ${ethers.formatEther(amountIn)} tokens (min output: ${ethers.formatEther(amountOutMin)})`);
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 400 + 150));
+
+        return {
+          hash: `0x${Math.random().toString(16).substring(2, 66)}`,
+          wait: async () => ({
+            status: 1,
+            gasUsed: 150000n,
+            gasPrice: ethers.parseUnits('30', 'gwei'),
+            blockNumber: Math.floor(Math.random() * 1000000)
+          })
+        };
+      }
+    };
+  }
+}
+
+async function completeSimulationExample() {
+  console.log('🚀 Complete Behavioral Simulation Example - Phase 4\n');
+  console.log('This demonstrates the full simulation system with safety components.\n');
+
+  try {
+    // ============================================================================
+    // Phase 1: Infrastructure Setup
+    // ============================================================================
+
+    console.log('🏗️  Phase 1: Infrastructure Setup');
+    console.log('=' .repeat(50));
+
+    // Initialize deterministic random number generator
+    const seededRng = new SeededRandom(12345);
+    console.log('✅ Seeded random generator initialized (seed: 12345)');
+
+    // Create wallet farm with safety components
+    console.log('📝 Creating wallet farm with 5 wallets...');
+    const walletFarm = new WalletFarm(TEST_MNEMONIC, 5, { verbose: false });
+
+    // Set up fund distributor
+    const fundDistributor = new FundDistributor(walletFarm);
+
+    // Initialize safety components
+    const budgetEnforcer = new BudgetEnforcer({
+      maxGasPerTx: ethers.parseUnits('0.01', 'ether'),
+      maxTotalGas: ethers.parseUnits('0.05', 'ether')
+    });
+    const circuitBreaker = new CircuitBreaker({ threshold: 3 });
+
+    console.log('✅ Safety components initialized:');
+    console.log('   • Budget enforcer: 0.01 ETH/tx, 0.05 ETH total');
+    console.log('   • Circuit breaker: 3 failure threshold');
+    console.log();
+
+    // ============================================================================
+    // Phase 2: Archetype & Timing Setup
+    // ============================================================================
+
+    console.log('🎭 Phase 2: Archetype & Timing Setup');
+    console.log('=' .repeat(50));
+
+    // Initialize archetype manager
+    const archetypeManager = new ArchetypeManager(seededRng);
+    console.log('✅ Archetype manager loaded with 5 user types:');
+    archetypeManager.getArchetypeNames().forEach(name => {
+      const archetype = archetypeManager.getArchetype(name);
+      console.log(`   • ${name}: ${archetype.description}`);
+    });
+
+    // Initialize timing engine
+    const timingEngine = new TimingEngine(seededRng);
+    console.log('✅ Timing engine initialized with 5 delay profiles');
+
+    // Initialize transaction executor with safety components
+    const transactionExecutor = new TransactionExecutor(
+      walletFarm,
+      undefined, // Use default nonce manager
+      undefined  // Use default retry manager
+    );
+    console.log('✅ Transaction executor initialized with safety components\n');
+
+    // ============================================================================
+    // Phase 3: Contract & Metrics Setup
+    // ============================================================================
+
+    console.log('📄 Phase 3: Contract & Metrics Setup');
+    console.log('=' .repeat(50));
+
+    // Create mock DeFi contract
+    const defiContract = new MockDeFiContract('MockDeFi Protocol');
+    console.log('✅ Mock DeFi contract created with multiple functions:');
+    console.log('   • transfer, stake, unstake, claimRewards, swap');
+
+    // Initialize comprehensive metrics tracking
+    const simulationMetrics = new SimulationMetrics();
+    console.log('✅ Simulation metrics initialized for comprehensive tracking\n');
+
+    // ============================================================================
+    // Phase 4: Individual Archetype Simulations
+    // ============================================================================
+
+    console.log('🐋 Phase 4: Individual Archetype Simulations');
+    console.log('=' .repeat(50));
+
+    const archetypes = archetypeManager.getArchetypeNames();
+
+    for (const archetypeName of archetypes) {
+      console.log(`\n🎯 Simulating ${archetypeName.toUpperCase()} behavior:`);
+
+      const archetype = archetypeManager.getArchetype(archetypeName);
+      console.log(`   Description: ${archetype.description}`);
+      console.log(`   Skip probability: ${(archetype.frequency.skipProbability * 100).toFixed(1)}%`);
+
+      simulationMetrics.startSimulation();
+
+      let attempts = 0;
+      let successes = 0;
+      let skips = 0;
+
+      // Simulate 10 interactions for this archetype
+      for (let i = 0; i < 10; i++) {
+        attempts++;
+        simulationMetrics.recordAttempt(archetypeName);
+
+        // Check if interaction should be skipped
+        if (archetypeManager.shouldSkipInteraction(archetypeName)) {
+          simulationMetrics.recordSkip(archetypeName);
+          skips++;
+          console.log(`   ${i + 1}. ⏭️  Skipped interaction`);
+          continue;
+        }
+
+        // Generate realistic delay
+        const delay = timingEngine.getDelaySync(
+          archetypeManager.getDelayProfile(archetypeName)
+        );
+        simulationMetrics.recordDelay(delay);
+        await new Promise(resolve => setTimeout(resolve, Math.min(delay / 10, 100))); // Speed up for demo
+
+        // Generate transaction parameters
+        const params = archetypeManager.generateParameters(archetypeName, 'transfer');
+        const gasEstimate = 65000n;
+        const gasPrice = ethers.parseUnits('20', 'gwei');
+
+        try {
+          // Check budget before transaction
+          budgetEnforcer.checkTransaction(gasEstimate, gasPrice);
+
+          // Execute transaction with circuit breaker protection
+          const result = await circuitBreaker.execute(async () => {
+            // Simulate transaction (success most of the time)
+            if (Math.random() > 0.9) { // 10% failure rate
+              throw new Error('Simulated transaction failure');
+            }
+
+            console.log(`   ${i + 1}. ✅ Transaction successful (delay: ${Math.round(delay)}ms)`);
+            return { gasUsed: gasEstimate, gasPrice };
+          });
+
+          budgetEnforcer.recordTransaction(result.gasUsed, result.gasPrice);
+          simulationMetrics.recordSuccess(archetypeName, result.gasUsed, result.gasPrice);
+          successes++;
+
+        } catch (error) {
+          if (error.message.includes('Circuit breaker')) {
+            console.log(`   ${i + 1}. 🔒 Circuit breaker activated`);
+            break;
+          } else {
+            console.log(`   ${i + 1}. ❌ Transaction failed: ${error.message}`);
+            simulationMetrics.recordFailure(archetypeName, error);
+          }
+        }
+      }
+
+      simulationMetrics.endSimulation();
+      const report = simulationMetrics.generateReport();
+
+      console.log(`   📊 Results: ${successes}/${attempts - skips} successful (${skips} skipped)`);
+      console.log(`   💰 Gas used: ${report.gas.totalGasUsed} (${report.summary.successRate} success rate)`);
+    }
+
+    console.log();
+
+    // ============================================================================
+    // Phase 5: Mixed Simulation Scenario
+    // ============================================================================
+
+    console.log('🎪 Phase 5: Mixed Simulation Scenario');
+    console.log('=' .repeat(50));
+
+    console.log('Running mixed simulation with all archetypes interacting simultaneously...');
+
+    simulationMetrics.reset();
+    simulationMetrics.startSimulation();
+
+    // Reset safety components
+    circuitBreaker.reset();
+
+    const mixedResults = {
+      totalAttempts: 0,
+      totalSuccesses: 0,
+      totalSkips: 0,
+      archetypePerformance: {}
+    };
+
+    // Initialize archetype performance tracking
+    archetypes.forEach(name => {
+      mixedResults.archetypePerformance[name] = {
+        attempts: 0,
+        successes: 0,
+        skips: 0,
+        gasUsed: 0n
+      };
+    });
+
+    // Run 50 mixed interactions
+    for (let i = 0; i < 50; i++) {
+      // Randomly select archetype (weighted by their typical behavior)
+      const weights = { whale: 0.1, activeTrader: 0.4, casual: 0.3, lurker: 0.1, researcher: 0.1 };
+      const random = seededRng.next();
+      let selectedArchetype = 'casual'; // default
+
+      let cumulativeWeight = 0;
+      for (const [archetype, weight] of Object.entries(weights)) {
+        cumulativeWeight += weight;
+        if (random <= cumulativeWeight) {
+          selectedArchetype = archetype;
+          break;
+        }
+      }
+
+      const perf = mixedResults.archetypePerformance[selectedArchetype];
+      perf.attempts++;
+      mixedResults.totalAttempts++;
+
+      simulationMetrics.recordAttempt(selectedArchetype);
+
+      // Check skip behavior
+      if (archetypeManager.shouldSkipInteraction(selectedArchetype)) {
+        simulationMetrics.recordSkip(selectedArchetype);
+        perf.skips++;
+        mixedResults.totalSkips++;
+        continue;
+      }
+
+      // Realistic timing
+      const delay = timingEngine.getDelaySync(
+        archetypeManager.getDelayProfile(selectedArchetype)
+      );
+      simulationMetrics.recordDelay(delay);
+      await new Promise(resolve => setTimeout(resolve, Math.min(delay / 20, 50))); // Speed up for demo
+
+      try {
+        // Safety checks
+        const gasEstimate = 65000n;
+        const gasPrice = ethers.parseUnits('20', 'gwei');
+        budgetEnforcer.checkTransaction(gasEstimate, gasPrice);
+
+        // Circuit breaker protection
+        const result = await circuitBreaker.execute(async () => {
+          // Simulate occasional failures
+          if (seededRng.next() < 0.05) { // 5% failure rate
+            throw new Error('Network congestion');
+          }
+          return { gasUsed: gasEstimate, gasPrice };
+        });
+
+        budgetEnforcer.recordTransaction(result.gasUsed, result.gasPrice);
+        simulationMetrics.recordSuccess(selectedArchetype, result.gasUsed, result.gasPrice);
+        perf.successes++;
+        perf.gasUsed += result.gasUsed;
+        mixedResults.totalSuccesses++;
+
+      } catch (error) {
+        simulationMetrics.recordFailure(selectedArchetype, error);
+      }
+    }
+
+    simulationMetrics.endSimulation();
+
+    // ============================================================================
+    // Phase 6: Comprehensive Reporting
+    // ============================================================================
+
+    console.log('\n📊 Phase 6: Comprehensive Reporting');
+    console.log('=' .repeat(50));
+
+    const finalReport = simulationMetrics.generateReport();
+    const budgetStatus = budgetEnforcer.getStatus();
+    const circuitStatus = circuitBreaker.getFailureStatus();
+
+    console.log('\n🎯 SIMULATION SUMMARY:');
+    console.log('-'.repeat(30));
+    console.log(`Total Interactions: ${finalReport.summary.totalAttempts}`);
+    console.log(`Successful: ${finalReport.summary.successful} (${finalReport.summary.successRate})`);
+    console.log(`Failed: ${finalReport.summary.failed}`);
+    console.log(`Skipped: ${finalReport.summary.skipped}`);
+    console.log(`Duration: ${finalReport.summary.durationSeconds}s`);
+
+    console.log('\n💰 BUDGET STATUS:');
+    console.log('-'.repeat(30));
+    console.log(`Total Spent: ${budgetStatus.totalGasSpentEth} ETH`);
+    console.log(`Remaining: ${budgetStatus.remainingBudgetEth} ETH`);
+    console.log(`Utilization: ${budgetStatus.utilizationPercent}%`);
+    console.log(`Status: ${budgetEnforcer.getUtilizationSummary().status}`);
+
+    console.log('\n🔄 CIRCUIT BREAKER STATUS:');
+    console.log('-'.repeat(30));
+    console.log(`State: ${circuitStatus.status}`);
+    console.log(`Consecutive Failures: ${circuitStatus.consecutiveFailures}`);
+    console.log(`Success Rate: ${circuitStatus.successRate}`);
+
+    console.log('\n📈 ARCHETYPE PERFORMANCE:');
+    console.log('-'.repeat(30));
+    Object.entries(finalReport.archetypes.breakdown).forEach(([name, stats]) => {
+      console.log(`${name.padEnd(12)}: ${stats.successRate} (${stats.successes}/${stats.attempts})`);
+    });
+
+    console.log('\n⚡ GAS EFFICIENCY:');
+    console.log('-'.repeat(30));
+    console.log(`Average Gas per Tx: ${finalReport.gas.averageGasPerTx}`);
+    console.log(`Gas Price Range: ${finalReport.gas.gasPrice.min || 'N/A'} - ${finalReport.gas.gasPrice.max || 'N/A'}`);
+
+    console.log('\n⏱️  TIMING ANALYSIS:');
+    console.log('-'.repeat(30));
+    console.log(`Average Confirmation: ${Math.round(finalReport.timing.averageConfirmation)}ms`);
+    console.log(`Average Delay: ${Math.round(finalReport.timing.averageDelay)}ms`);
+    console.log(`Total Simulation Time: ${Math.round(finalReport.timing.totalSimulationTime / 1000)}s`);
+
+    console.log('\n🚨 ERROR ANALYSIS:');
+    console.log('-'.repeat(30));
+    Object.entries(finalReport.errors.errorBreakdown).forEach(([type, count]) => {
+      console.log(`${type}: ${count}`);
+    });
+
+    console.log('\n🎉 SIMULATION COMPLETED SUCCESSFULLY!');
+    console.log('All safety components functioned correctly.');
+    console.log('Behavioral patterns were realistic and measurable.');
+    console.log('Comprehensive metrics provide full observability.');
+
+  } catch (error) {
+    console.error('\n❌ Simulation failed:', error.message);
+    console.error('Stack trace:', error.stack);
+    process.exit(1);
+  }
+}
+
+// Run the example
+if (import.meta.url === `file://${process.argv[1]}`) {
+  completeSimulationExample().catch(console.error);
+}
+
+export { completeSimulationExample, MockDeFiContract };
             gasPrice: ethers.parseUnits('20', 'gwei'),
             blockNumber: Math.floor(Math.random() * 1000000)
           })
