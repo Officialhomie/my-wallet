@@ -1,0 +1,47 @@
+{
+    "name": "wallet-farm",
+    "version": "1.0.0",
+    "description": "HD Wallet Farm for EVM Smart Contract Testing & Interaction Simulation",
+    "main": "index.js",
+    "scripts": {
+      "setup": "npm install && npm run copy-env",
+      "copy-env": "cp .env.example .env || true",
+      "derive:wallets": "node scripts/01-deriveWallets.js",
+      "fund:wallets": "hardhat run scripts/02-fundWallets.js --network",
+      "simulate:interactions": "hardhat run scripts/03-simulateInteractions.js --network",
+      "deploy:contracts": "hardhat run scripts/04-deployTestContracts.js --network",
+      "test": "hardhat test",
+      "test:sepolia": "hardhat test --network sepolia",
+      "compile": "hardhat compile",
+      "check:balances": "node scripts/05-checkBalances.js",
+      "generate:report": "node scripts/06-generateReport.js",
+      "dev": "nodemon --exec node scripts/01-deriveWallets.js",
+      "clean": "rm -rf artifacts cache && npm install"
+    },
+    "keywords": [
+      "wallet",
+      "farm",
+      "testing",
+      "evm",
+      "hardhat",
+      "ethers"
+    ],
+    "author": "Homie",
+    "license": "MIT",
+    "devDependencies": {
+      "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+      "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+      "@openzeppelin/hardhat-upgrades": "^2.0.0",
+      "hardhat": "^2.20.0",
+      "hardhat-gas-reporter": "^1.0.9",
+      "solidity-coverage": "^0.8.5",
+      "nodemon": "^3.0.1"
+    },
+    "dependencies": {
+      "ethers": "^6.10.0",
+      "dotenv": "^16.3.1",
+      "axios": "^1.6.5",
+      "bip39": "^3.1.0",
+      "chalk": "^4.1.2"
+    }
+  }
