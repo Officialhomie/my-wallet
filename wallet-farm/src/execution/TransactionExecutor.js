@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { NonceManager } from './NonceManager.js';
 import { RetryManager } from './RetryManager.js';
+import { RateLimiter } from '../safety/RateLimiter.js';
 
 /**
  * TransactionExecutor - Executes transactions with proper nonce management and retry logic
@@ -19,8 +20,9 @@ export class TransactionExecutor {
    * @param {WalletFarm} walletFarm - The wallet farm instance
    * @param {NonceManager} [nonceManager] - Nonce manager (creates if not provided)
    * @param {RetryManager} [retryManager] - Retry manager (creates if not provided)
+   * @param {RateLimiter} [rateLimiter] - Rate limiter (creates if not provided)
    */
-  constructor(walletFarm, nonceManager = null, retryManager = null) {
+  constructor(walletFarm, nonceManager = null, retryManager = null, rateLimiter = null) {
     if (!walletFarm || typeof walletFarm.getWallet !== 'function') {
       throw new Error('Valid WalletFarm instance is required');
     }
@@ -28,6 +30,10 @@ export class TransactionExecutor {
     this.walletFarm = walletFarm;
     this.nonceManager = nonceManager || new NonceManager(walletFarm);
     this.retryManager = retryManager || new RetryManager();
+    this.rateLimiter = rateLimiter || new RateLimiter({
+      requestsPerSecond: 10, // Conservative default
+      burstSize: 20
+    });
 
     // Default gas margin (10% safety buffer)
     this.gasMargin = 1.1;
@@ -210,10 +216,16 @@ export class TransactionExecutor {
   async #executeOnce(walletIndex, chainName, contract, method, params, options) {
     const wallet = this.walletFarm.getWallet(walletIndex, chainName);
 
+    // Rate limit before RPC call
+    await this.rateLimiter.acquire(1);
+
     // Acquire nonce (blocks until available)
     const nonce = await this.nonceManager.acquireNonce(walletIndex, chainName);
 
     try {
+      // Rate limit before gas estimation
+      await this.rateLimiter.acquire(1);
+
       // Estimate gas with safety margin
       const gasLimit = await this.estimateGas(contract, method, params, options);
 
