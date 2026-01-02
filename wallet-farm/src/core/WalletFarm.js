@@ -149,25 +149,36 @@ export class WalletFarm {
    * @param {Object} config - Chain configuration
    */
   #connectToChain(config) {
-    const { name, chainId, rpcUrl, blockTime = 12000 } = config;
+    const { name, chainId, rpcUrl, provider: providedProvider, blockTime = 12000 } = config;
 
-    if (!name || !chainId || !rpcUrl) {
-      throw new Error('Chain config must include name, chainId, and rpcUrl');
+    if (!name || !chainId) {
+      throw new Error('Chain config must include name and chainId');
+    }
+
+    if (!rpcUrl && !providedProvider) {
+      throw new Error('Chain config must include either rpcUrl or provider');
     }
 
     try {
-      // Create provider with network configuration
-      const provider = new ethers.JsonRpcProvider(rpcUrl, {
-        chainId,
-        name,
-        ensAddress: null // Disable ENS for testnets
-      });
+      let provider;
+
+      if (providedProvider) {
+        // Use provided provider (for testing with mocks)
+        provider = providedProvider;
+      } else {
+        // Create provider with network configuration
+        provider = new ethers.JsonRpcProvider(rpcUrl, {
+          chainId,
+          name,
+          ensAddress: null // Disable ENS for testnets
+        });
+      }
 
       // Store provider
       this.providers.set(name, {
         provider,
         chainId,
-        rpcUrl,
+        rpcUrl: rpcUrl || 'mock://provider',
         blockTime,
         connectedAt: new Date().toISOString()
       });
