@@ -1,0 +1,13 @@
+# Railway Configuration for Wallet Farm Backend
+# This file sets the root directory to wallet-farm/ to avoid Hardhat dependency conflicts
+
+[build]
+builder = "nixpacks"
+buildCommand = "cd wallet-farm && npm ci --omit=dev"
+
+[deploy]
+startCommand = "cd wallet-farm && npm run server"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
