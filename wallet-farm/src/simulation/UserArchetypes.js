@@ -11,6 +11,14 @@ export class UserArchetypes {
       ...options
     };
 
+    // Inject RNG for deterministic behavior
+    this.rng = options.rng || Math; // Fallback to Math for backward compatibility
+
+    // Helper method for random number generation
+    this.random = () => {
+      return this.rng === Math ? this.rng.random() : this.rng.next();
+    };
+
     // Base archetypes with comprehensive behavior patterns
     this.archetypes = {
       whale: {
@@ -215,7 +223,7 @@ export class UserArchetypes {
    */
   shouldSkipInteraction(archetypeName) {
     const archetype = this.getArchetype(archetypeName);
-    return Math.random() < archetype.skipProbability;
+    return this.random() < archetype.skipProbability;
   }
 
   /**
@@ -230,7 +238,7 @@ export class UserArchetypes {
     const config = constraints.size || archetype.transactionSize;
 
     const range = config.max - config.min;
-    const random = Math.random();
+    const random = this.random();
 
     // Apply distribution based on archetype
     let size;
