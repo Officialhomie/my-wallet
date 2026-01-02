@@ -1,180 +1,242 @@
+import { SeededRandom } from '../timing/SeededRandom.js';
+
 /**
- * TimingEngine - Generates human-like delays and timing patterns
+ * TimingEngine - Generates realistic human-like delays for transaction simulation
  *
- * Creates realistic timing distributions that mimic human behavior
- * rather than predictable automated patterns.
+ * Uses seeded random number generation for reproducible testing and applies
+ * triangular distribution to cluster delays around human-like midpoints.
  */
 export class TimingEngine {
-  constructor(options = {}) {
-    this.options = {
-      baseMultiplier: options.baseMultiplier || 1.0,
-      variance: options.variance || 0.3, // 30% variance by default
-      ...options
+  /**
+   * Initialize timing engine with seeded random generator
+   *
+   * @param {SeededRandom} [rng] - Seeded random number generator (creates new if not provided)
+   */
+  constructor(rng = null) {
+    // Use injected RNG or create new one
+    this.rng = rng || new SeededRandom();
+
+    // Delay profiles (in milliseconds) - clustered around human-like behaviors
+    this.profiles = {
+      quick: { min: 500, max: 2000, variance: 0.3 },
+      normal: { min: 2000, max: 8000, variance: 0.3 },
+      thoughtful: { min: 8000, max: 20000, variance: 0.4 },
+      slow: { min: 20000, max: 60000, variance: 0.5 },
+      verySlow: { min: 60000, max: 180000, variance: 0.6 }
     };
 
-    // Predefined timing profiles for different activity types
-    this.timingProfiles = {
-      quick: { min: 1000, max: 3000 },      // Reading data, quick checks
-      normal: { min: 2000, max: 8000 },     // Standard interactions
-      thoughtful: { min: 10000, max: 30000 }, // Reviewing before confirming
-      slow: { min: 30000, max: 120000 },   // Careful consideration
-      verySlow: { min: 300000, max: 600000 }, // Rare interactions
-      instant: { min: 100, max: 500 },      // Immediate responses
-      deliberate: { min: 60000, max: 180000 } // Very careful actions
+    // Typing speed (words per minute)
+    this.typingWPM = {
+      slow: 20,
+      average: 40,
+      fast: 60
     };
   }
 
   /**
-   * Generates a human-like delay with weighted distribution
+   * Generate weighted random delay using triangular distribution
    *
-   * @param {string|Object} profile - Timing profile name or custom profile object
+   * Triangular distribution clusters values around the midpoint, which is
+   * more realistic for human behavior than uniform distribution.
+   *
+   * @private
+   * @param {number} min - Minimum delay in milliseconds
+   * @param {number} max - Maximum delay in milliseconds
+   * @returns {number} Delay in milliseconds
+   */
+  #weightedDelay(min, max) {
+    // Triangular distribution: average of two uniform random values
+    // This clusters values around the midpoint
+    const r1 = this.rng.next();
+    const r2 = this.rng.next();
+    const avg = (r1 + r2) / 2;
+
+    return min + (avg * (max - min));
+  }
+
+  /**
+   * Apply variance to delay value
+   *
+   * @private
+   * @param {number} delay - Base delay in milliseconds
+   * @param {number} variance - Variance factor (0-1)
+   * @returns {number} Delay with variance applied
+   */
+  #applyVariance(delay, variance) {
+    const varianceFactor = 1 + ((this.rng.next() - 0.5) * 2 * variance);
+    return Math.max(0, delay * varianceFactor);
+  }
+
+  /**
+   * Generate human-like delay based on profile
+   *
+   * @param {string} profile - Delay profile name ('quick', 'normal', 'thoughtful', 'slow', 'verySlow')
    * @param {Object} [options={}] - Additional options
-   * @returns {Promise<number>} Delay duration in milliseconds
+   * @param {boolean} [options.disableVariance=false] - Disable variance application
+   * @param {number} [options.multiplier=1] - Multiply delay by this factor
+   * @returns {Promise<number>} Resolves after delay, returns actual delay used in milliseconds
    */
   async humanDelay(profile = 'normal', options = {}) {
-    const opts = { ...this.options, ...options };
-    const config = typeof profile === 'string' ?
-      this.timingProfiles[profile] || this.timingProfiles.normal :
-      profile;
-
-    if (!config || !config.min || !config.max) {
-      throw new Error(`Invalid timing profile: ${profile}`);
+    const config = this.profiles[profile];
+    if (!config) {
+      throw new Error(`Unknown delay profile: ${profile}. Available: ${Object.keys(this.profiles).join(', ')}`);
     }
 
-    // Apply multipliers
-    let minMs = config.min * opts.baseMultiplier;
-    let maxMs = config.max * opts.baseMultiplier;
+    // Generate weighted delay (triangular distribution)
+    let delay = this.#weightedDelay(config.min, config.max);
 
-    // Apply custom multipliers if provided
-    if (opts.minMultiplier) minMs *= opts.minMultiplier;
-    if (opts.maxMultiplier) maxMs *= opts.maxMultiplier;
-
-    // Generate delay with weighted distribution (humans tend toward middle)
-    const range = maxMs - minMs;
-    const random = Math.random();
-
-    // Use beta distribution approximation for more realistic timing
-    // This creates a distribution that's weighted toward the middle
-    const weighted = this.#betaDistribution(random, 2, 2); // Beta(2,2) peaks in middle
-    const delay = Math.floor(weighted * range) + minMs;
-
-    // Apply variance
-    const variance = delay * opts.variance * (Math.random() - 0.5) * 2;
-    const finalDelay = Math.max(100, delay + variance); // Minimum 100ms
-
-    if (opts.verbose) {
-      console.log(`⏱️  Human delay: ${Math.round(finalDelay)}ms (${profile} profile)`);
+    // Apply variance if not disabled
+    if (options.disableVariance !== true) {
+      delay = this.#applyVariance(delay, config.variance);
     }
 
-    await new Promise(resolve => setTimeout(resolve, finalDelay));
-    return finalDelay;
-  }
+    // Apply multiplier if provided
+    if (options.multiplier) {
+      delay *= options.multiplier;
+    }
 
-  /**
-   * Generates a simple random delay between min and max
-   *
-   * @param {number} minMs - Minimum delay in milliseconds
-   * @param {number} maxMs - Maximum delay in milliseconds
-   * @returns {Promise<number>} Delay duration in milliseconds
-   */
-  async randomDelay(minMs, maxMs) {
-    const delay = Math.floor(Math.random() * (maxMs - minMs)) + minMs;
+    // Wait for the delay
     await new Promise(resolve => setTimeout(resolve, delay));
+
     return delay;
   }
 
   /**
-   * Simulates human typing speed
+   * Get delay value synchronously (for testing and calculations)
    *
-   * @param {string} text - Text being typed
-   * @param {number} [wpm=40] - Words per minute typing speed
-   * @returns {Promise<number>} Typing duration in milliseconds
+   * @param {string} profile - Delay profile name
+   * @param {Object} [options={}] - Additional options
+   * @returns {number} Delay in milliseconds
    */
-  async simulateTyping(text, wpm = 40) {
-    const words = text.split(/\s+/).length;
-    const baseTypingTime = (words / wpm) * 60000; // Convert to milliseconds
-
-    // Add realistic variance (±30%)
-    const variance = baseTypingTime * 0.3;
-    const actualTypingTime = baseTypingTime + (Math.random() - 0.5) * variance;
-
-    // Add occasional pauses (thinking breaks)
-    const pauseChance = 0.2; // 20% chance of pause
-    const pauseTime = pauseChance > Math.random() ?
-      Math.random() * 2000 + 500 : 0; // 500-2500ms pause
-
-    const totalTime = Math.max(500, actualTypingTime + pauseTime);
-
-    await new Promise(resolve => setTimeout(resolve, totalTime));
-    return totalTime;
-  }
-
-  /**
-   * Creates a timing sequence for multi-step processes
-   *
-   * @param {Array<string|Object>} steps - Array of timing profiles for each step
-   * @param {Object} [options={}] - Options for the sequence
-   * @returns {Promise<Array<number>>} Array of delay durations
-   */
-  async timingSequence(steps, options = {}) {
-    const delays = [];
-    const opts = { ...this.options, ...options };
-
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-
-      // Add inter-step delay if not the first step
-      if (i > 0 && opts.interStepDelay) {
-        const interDelay = await this.humanDelay(opts.interStepDelay, { verbose: false });
-        delays.push(interDelay);
-      }
-
-      const delay = await this.humanDelay(step, opts);
-      delays.push(delay);
+  getDelaySync(profile = 'normal', options = {}) {
+    const config = this.profiles[profile];
+    if (!config) {
+      throw new Error(`Unknown delay profile: ${profile}`);
     }
 
-    return delays;
+    let delay = this.#weightedDelay(config.min, config.max);
+
+    if (options.disableVariance !== true) {
+      delay = this.#applyVariance(delay, config.variance);
+    }
+
+    if (options.multiplier) {
+      delay *= options.multiplier;
+    }
+
+    return delay;
   }
 
   /**
-   * Generates burst patterns (rapid actions followed by pauses)
+   * Simulate typing delay based on text length
    *
-   * @param {number} burstSize - Number of quick actions
-   * @param {string} burstProfile - Profile for burst actions
-   * @param {string} pauseProfile - Profile for pauses between bursts
-   * @param {number} [iterations=1] - Number of burst-pause cycles
-   * @returns {Promise<Array<number>>} Array of delay durations
+   * @param {string} text - Text being "typed"
+   * @param {string} [speed='average'] - Typing speed ('slow', 'average', 'fast')
+   * @returns {Promise<number>} Resolves after delay, returns actual delay in milliseconds
    */
-  async burstPattern(burstSize, burstProfile = 'quick', pauseProfile = 'normal', iterations = 1) {
-    const delays = [];
+  async typingDelay(text, speed = 'average') {
+    const wpm = this.typingWPM[speed];
+    if (!wpm) {
+      throw new Error(`Unknown typing speed: ${speed}. Available: ${Object.keys(this.typingWPM).join(', ')}`);
+    }
 
-    for (let i = 0; i < iterations; i++) {
-      // Burst of quick actions
-      for (let j = 0; j < burstSize; j++) {
-        const delay = await this.humanDelay(burstProfile, { verbose: false });
-        delays.push(delay);
-      }
+    // Calculate delay: (characters / (WPM * 5)) * 60000ms
+    // Assuming average word length of 5 characters
+    const characters = text.length;
+    const baseDelay = (characters / (wpm * 5)) * 60000;
 
-      // Pause before next burst (except for last iteration)
-      if (i < iterations - 1) {
-        const pauseDelay = await this.humanDelay(pauseProfile, { verbose: false });
-        delays.push(pauseDelay);
+    // Apply variance (30% for typing realism)
+    const delay = this.#applyVariance(baseDelay, 0.3);
+
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    return delay;
+  }
+
+  /**
+   * Generate burst of rapid actions with pauses
+   *
+   * Simulates user doing multiple quick actions then pausing.
+   * Useful for modeling realistic user interaction patterns.
+   *
+   * @param {number} [burstCount=3] - Number of rapid actions
+   * @param {number} [pauseDuration=5000] - Pause after burst in milliseconds
+   * @returns {Promise<Object>} Burst timing information
+   */
+  async burstPattern(burstCount = 3, pauseDuration = 5000) {
+    const actionDelays = [];
+
+    // Rapid actions (500-1500ms between)
+    for (let i = 0; i < burstCount - 1; i++) {
+      const delay = this.rng.nextInt(500, 1500);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      actionDelays.push(delay);
+    }
+
+    // Pause after burst
+    await new Promise(resolve => setTimeout(resolve, pauseDuration));
+
+    return {
+      burstCount,
+      actionDelays,
+      pauseDuration,
+      totalDuration: actionDelays.reduce((a, b) => a + b, 0) + pauseDuration
+    };
+  }
+
+  /**
+   * Generate timing sequence for multiple actions
+   *
+   * @param {Array<Object>} actions - Array of action objects with profile and optional callback
+   * @param {Object} [options={}] - Sequence options
+   * @returns {Promise<Array<Object>>} Array of timing results
+   */
+  async timingSequence(actions, options = {}) {
+    const results = [];
+    const startTime = Date.now();
+
+    for (let i = 0; i < actions.length; i++) {
+      const action = actions[i];
+
+      // Use action-specific profile or default
+      const profile = action.profile || options.defaultProfile || 'normal';
+      const delay = await this.humanDelay(profile, action.options);
+
+      const result = {
+        index: i,
+        action: action.name || `action_${i}`,
+        profile,
+        delay,
+        timestamp: Date.now(),
+        timeFromStart: Date.now() - startTime
+      };
+
+      results.push(result);
+
+      // Execute callback if provided
+      if (action.callback) {
+        try {
+          await action.callback(result);
+        } catch (error) {
+          console.warn(`Callback error for action ${action.name}:`, error);
+        }
       }
     }
 
-    return delays;
+    return results;
   }
 
   /**
-   * Creates a custom timing profile
+   * Add custom timing profile
    *
    * @param {string} name - Profile name
    * @param {Object} config - Profile configuration
    * @param {number} config.min - Minimum delay in ms
    * @param {number} config.max - Maximum delay in ms
+   * @param {number} [config.variance=0.3] - Variance factor (0-1)
    */
   addProfile(name, config) {
-    if (!name || typeof name !== 'string') {
+    if (typeof name !== 'string' || name.trim() === '') {
       throw new Error('Profile name must be a non-empty string');
     }
 
@@ -182,79 +244,86 @@ export class TimingEngine {
       throw new Error('Profile config must be an object');
     }
 
-    if (!config.min || !config.max || config.min >= config.max) {
-      throw new Error('Profile must have valid min and max values');
+    if (typeof config.min !== 'number' || typeof config.max !== 'number') {
+      throw new Error('Profile config must have numeric min and max properties');
     }
 
-    this.timingProfiles[name] = { ...config };
-  }
-
-  /**
-   * Gets all available timing profiles
-   *
-   * @returns {Object} Copy of timing profiles
-   */
-  getProfiles() {
-    return { ...this.timingProfiles };
-  }
-
-  /**
-   * Beta distribution approximation for more realistic timing
-   * @private
-   * @param {number} x - Random value between 0 and 1
-   * @param {number} alpha - Alpha parameter
-   * @param {number} beta - Beta parameter
-   * @returns {number} Beta distributed value
-   */
-  #betaDistribution(x, alpha, beta) {
-    // Simplified beta distribution using approximation
-    // For more accuracy, could implement full beta distribution
-    if (alpha === 2 && beta === 2) {
-      // Beta(2,2) is equivalent to arcsine distribution
-      return 0.5 + 0.5 * Math.sin(Math.PI * (x - 0.5));
+    if (config.min >= config.max) {
+      throw new Error('Profile min must be less than max');
     }
 
-    // Fallback to weighted distribution
-    return Math.pow(x, 1 / alpha) * Math.pow(1 - x, 1 / beta);
-  }
-
-  /**
-   * Calculates timing statistics
-   *
-   * @param {Array<number>} delays - Array of delay measurements
-   * @returns {Object} Timing statistics
-   */
-  calculateStats(delays) {
-    if (!Array.isArray(delays) || delays.length === 0) {
-      return { count: 0 };
-    }
-
-    const sorted = [...delays].sort((a, b) => a - b);
-    const sum = delays.reduce((a, b) => a + b, 0);
-
-    return {
-      count: delays.length,
-      total: sum,
-      average: sum / delays.length,
-      median: sorted[Math.floor(sorted.length / 2)],
-      min: sorted[0],
-      max: sorted[sorted.length - 1],
-      p95: sorted[Math.floor(sorted.length * 0.95)],
-      p99: sorted[Math.floor(sorted.length * 0.99)],
-      standardDeviation: this.#calculateStandardDeviation(delays, sum / delays.length)
+    this.profiles[name] = {
+      min: config.min,
+      max: config.max,
+      variance: config.variance || 0.3
     };
   }
 
   /**
-   * Calculates standard deviation
-   * @private
-   * @param {Array<number>} values - Array of values
-   * @param {number} mean - Mean value
-   * @returns {number} Standard deviation
+   * Get available timing profiles
+   *
+   * @returns {Object} Copy of available profiles
    */
-  #calculateStandardDeviation(values, mean) {
-    const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / values.length;
-    return Math.sqrt(variance);
+  getProfiles() {
+    return { ...this.profiles };
+  }
+
+  /**
+   * Get timing statistics for a set of delays
+   *
+   * @param {Array<number>} delays - Array of delay values
+   * @returns {Object} Statistical summary
+   */
+  calculateStats(delays) {
+    if (!Array.isArray(delays) || delays.length === 0) {
+      return {
+        count: 0,
+        mean: 0,
+        median: 0,
+        min: 0,
+        max: 0,
+        variance: 0,
+        stdDev: 0
+      };
+    }
+
+    const sorted = [...delays].sort((a, b) => a - b);
+    const sum = delays.reduce((a, b) => a + b, 0);
+    const mean = sum / delays.length;
+
+    const variance = delays.reduce((acc, delay) => acc + Math.pow(delay - mean, 2), 0) / delays.length;
+    const stdDev = Math.sqrt(variance);
+
+    return {
+      count: delays.length,
+      mean,
+      median: sorted[Math.floor(delays.length / 2)],
+      min: sorted[0],
+      max: sorted[sorted.length - 1],
+      variance,
+      stdDev
+    };
+  }
+
+  /**
+   * Get current RNG instance (for testing/debugging)
+   *
+   * @returns {SeededRandom} Current RNG instance
+   */
+  getRng() {
+    return this.rng;
+  }
+
+  /**
+   * Replace RNG instance
+   *
+   * @param {SeededRandom} rng - New RNG instance
+   */
+  setRng(rng) {
+    if (!(rng instanceof SeededRandom)) {
+      throw new Error('RNG must be an instance of SeededRandom');
+    }
+    this.rng = rng;
   }
 }
 
