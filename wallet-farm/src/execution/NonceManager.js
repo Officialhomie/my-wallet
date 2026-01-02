@@ -29,6 +29,15 @@ export class NonceManager {
     // Track sync operations to avoid excessive on-chain calls
     this.lastSyncTimes = new Map();
     this.syncCooldownMs = 5000; // 5 seconds between syncs
+
+    // Performance tracking for stress testing
+    this.stats = {
+      totalAcquisitions: 0,
+      totalReleases: 0,
+      totalQueuedRequests: 0,
+      queueTimes: [],
+      maxQueueDepth: 0
+    };
   }
 
   /**
@@ -97,6 +106,7 @@ export class NonceManager {
    * @returns {Promise<number>} Next available nonce
    */
   async acquireNonce(walletIndex, chainName) {
+    this.stats.totalAcquisitions++;
     const key = this.#getKey(walletIndex, chainName);
 
     // Initialize if needed
@@ -108,9 +118,21 @@ export class NonceManager {
 
     // If nonce is locked, wait in queue
     if (state.locked) {
+      this.stats.totalQueuedRequests++;
+      const queueStartTime = Date.now();
+
       await new Promise((resolve) => {
         this.nonceQueues.get(key).push(resolve);
+
+        // Track queue depth
+        const queueDepth = this.nonceQueues.get(key).length;
+        if (queueDepth > this.stats.maxQueueDepth) {
+          this.stats.maxQueueDepth = queueDepth;
+        }
       });
+
+      const queueTime = Date.now() - queueStartTime;
+      this.stats.queueTimes.push(queueTime);
     }
 
     // Lock nonce and increment for next caller
@@ -130,6 +152,7 @@ export class NonceManager {
    * @param {string} chainName - Chain name
    */
   releaseNonce(walletIndex, chainName) {
+    this.stats.totalReleases++;
     const key = this.#getKey(walletIndex, chainName);
     const state = this.nonceStates.get(key);
 
@@ -328,6 +351,154 @@ export class NonceManager {
   }
 
   /**
+   * Detect nonce gaps between local state and on-chain state
+   *
+   * Nonce gaps occur when transactions fail after nonce acquisition but before broadcast,
+   * causing local nonce to drift ahead of on-chain nonce.
+   *
+   * @param {number} walletIndex - Wallet index
+   * @param {string} chainName - Chain name
+   * @returns {Promise<Object>} Gap detection result
+   */
+  async detectNonceGaps(walletIndex, chainName) {
+    const key = this.#getKey(walletIndex, chainName);
+
+    // Check if nonce state exists
+    if (!this.nonceStates.has(key)) {
+      return {
+        hasGap: false,
+        message: 'Nonce state not initialized'
+      };
+    }
+
+    const state = this.nonceStates.get(key);
+    const wallet = this.walletFarm.getWallet(walletIndex, chainName);
+
+    try {
+      // Get on-chain nonce (confirmed transactions only)
+      const onChainNonce = await wallet.provider.getTransactionCount(
+        wallet.address,
+        'latest' // Use confirmed nonce, not pending
+      );
+
+      const localNonce = state.current;
+      const gap = localNonce - onChainNonce;
+
+      if (gap > 0) {
+        console.warn(`⚠️  Nonce gap detected for wallet ${walletIndex} on ${chainName}:`);
+        console.warn(`   Local nonce: ${localNonce}`);
+        console.warn(`   Chain nonce: ${onChainNonce}`);
+        console.warn(`   Gap size: ${gap} nonces lost`);
+
+        // Auto-correct the nonce state
+        state.current = onChainNonce;
+        state.lastSync = Date.now();
+
+        return {
+          hasGap: true,
+          localNonce: localNonce,
+          chainNonce: onChainNonce,
+          gapSize: gap,
+          corrected: true,
+          message: `Gap of ${gap} nonces detected and corrected`
+        };
+      } else if (gap < 0) {
+        // Chain nonce is ahead - this shouldn't happen normally
+        console.warn(`⚠️  Chain nonce ahead of local for wallet ${walletIndex} on ${chainName}`);
+        console.warn(`   Local nonce: ${localNonce}`);
+        console.warn(`   Chain nonce: ${onChainNonce}`);
+
+        // Sync to chain nonce
+        state.current = onChainNonce;
+        state.lastSync = Date.now();
+
+        return {
+          hasGap: false,
+          chainAhead: true,
+          localNonce: localNonce,
+          chainNonce: onChainNonce,
+          difference: Math.abs(gap),
+          corrected: true,
+          message: 'Chain nonce was ahead, synchronized'
+        };
+      }
+
+      // No gap
+      return {
+        hasGap: false,
+        localNonce: localNonce,
+        chainNonce: onChainNonce,
+        message: 'Nonces are in sync'
+      };
+
+    } catch (error) {
+      return {
+        hasGap: false,
+        error: true,
+        message: `Failed to check nonce gap: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Monitor nonce gaps periodically
+   *
+   * Starts a background process that checks for nonce gaps at regular intervals.
+   * Useful for long-running simulations to catch drift early.
+   *
+   * @param {number} [intervalMs=60000] - Check interval in milliseconds (default: 1 minute)
+   * @returns {number} Interval ID (use stopGapMonitoring to stop)
+   */
+  monitorNonceGaps(intervalMs = 60000) {
+    if (this.gapMonitorInterval) {
+      console.warn('⚠️  Gap monitoring already active');
+      return this.gapMonitorInterval;
+    }
+
+    console.log(`👁️  Starting nonce gap monitoring (interval: ${intervalMs}ms)`);
+
+    this.gapMonitorInterval = setInterval(async () => {
+      const gapsFound = [];
+
+      for (const key of this.nonceStates.keys()) {
+        const [walletIndex, chainName] = key.split(':').map((s, i) =>
+          i === 0 ? parseInt(s) : s
+        );
+
+        const result = await this.detectNonceGaps(walletIndex, chainName);
+
+        if (result.hasGap || result.chainAhead) {
+          gapsFound.push({
+            walletIndex,
+            chainName,
+            ...result
+          });
+        }
+      }
+
+      if (gapsFound.length > 0) {
+        console.warn(`🔍 Gap monitoring found ${gapsFound.length} issue(s):`);
+        gapsFound.forEach(gap => {
+          console.warn(`   Wallet ${gap.walletIndex} on ${gap.chainName}: ${gap.message}`);
+        });
+      }
+    }, intervalMs);
+
+    return this.gapMonitorInterval;
+  }
+
+  /**
+   * Stop nonce gap monitoring
+   */
+  stopGapMonitoring() {
+    if (this.gapMonitorInterval) {
+      clearInterval(this.gapMonitorInterval);
+      this.gapMonitorInterval = null;
+      console.log('✅ Nonce gap monitoring stopped');
+    }
+  }
+
+  /**
    * Force sync all nonces with on-chain values
    *
    * Useful for recovery after network issues or when nonce state is uncertain.
@@ -363,6 +534,38 @@ export class NonceManager {
 
     console.log(`✅ Force sync complete: ${results.successful} successful, ${results.failed} failed`);
     return results;
+  }
+
+  /**
+   * Get nonce manager performance statistics
+   *
+   * @returns {Object} Statistics object
+   */
+  getStats() {
+    const avgQueueTime = this.stats.queueTimes.length > 0
+      ? this.stats.queueTimes.reduce((a, b) => a + b, 0) / this.stats.queueTimes.length
+      : 0;
+
+    return {
+      totalAcquisitions: this.stats.totalAcquisitions,
+      totalReleases: this.stats.totalReleases,
+      totalQueuedRequests: this.stats.totalQueuedRequests,
+      averageQueueTime: avgQueueTime,
+      maxQueueDepth: this.stats.maxQueueDepth,
+      queueTimeP95: this.#percentile(this.stats.queueTimes, 0.95),
+      queueTimeP99: this.#percentile(this.stats.queueTimes, 0.99)
+    };
+  }
+
+  /**
+   * Calculate percentile from array
+   * @private
+   */
+  #percentile(arr, p) {
+    if (arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const index = Math.ceil(sorted.length * p) - 1;
+    return sorted[Math.max(0, Math.min(sorted.length - 1, index))];
   }
 }
 
