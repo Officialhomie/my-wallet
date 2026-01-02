@@ -25,7 +25,8 @@
     "examples:funding": "node examples/fund-distribution.js",
     "examples:network": "node examples/network-connection.js",
     "examples:simulation": "node examples/behavioral-simulation.js",
-    "examples:workflow": "node examples/complete-workflow.js"
+    "examples:workflow": "node examples/complete-workflow.js",
+    "examples:timing": "node examples/timing-demo.js"
   },
   "keywords": [
     "wallet",
