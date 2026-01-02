@@ -1,0 +1,47 @@
+# Documentation files
+*.md
+ANALYTICS_MONITORING.md
+BEHAVIORAL_SIMULATION.md
+CORE_IMPLEMENTATION.md
+CROSS_CHAIN_TESTING.md
+EXECUTIVE_OVERVIEW.md
+FUND_DISTRIBUTION.md
+MAINTENANCE_SCALING.md
+PROJECT_STRUCTURE.md
+SECURITY_PRACTICES.md
+USAGE_EXAMPLES.md
+WALLET_FARM_SPECIFICATION.md
+
+# Sensitive files
+.env
+.env.local
+.env.development
+.env.production
+config.json
+secrets.json
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
