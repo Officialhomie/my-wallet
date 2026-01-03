@@ -1,12 +1,16 @@
 # Nixpacks Configuration for Wallet Farm Backend
-# IMPORTANT: In Railway dashboard, set "Root Directory" to: wallet-farm
-# This file is a fallback configuration
+# This configuration operates from wallet-farm/ subdirectory
 
 [phases.setup]
 nixPkgs = ["nodejs_18"]
 
 [phases.install]
-cmds = ["npm ci --omit=dev"]
+# Install production dependencies from wallet-farm subdirectory
+cmds = ["cd wallet-farm && npm ci --omit=dev"]
+
+[phases.build]
+# Skip build phase to prevent duplicate npm ci
+cmds = []
 
 [start]
-cmd = "npm run server"
+cmd = "cd wallet-farm && npm run server"
