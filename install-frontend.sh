@@ -62,3 +62,4 @@ echo "Then open http://localhost:3000 in your browser"
 echo ""
 echo "Make sure the Wallet Farm backend is running on port 3001"
 echo "See the main project README for backend setup instructions"
+
