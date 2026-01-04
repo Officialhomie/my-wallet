@@ -180,3 +180,4 @@ export function WalletGrid({ className }: WalletGridProps) {
     </div>
   );
 }
+

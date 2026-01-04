@@ -65,3 +65,4 @@ export function useWebSocket(url?: string) {
     isConnected: useSimulationStore((state) => state.isConnected),
   };
 }
+

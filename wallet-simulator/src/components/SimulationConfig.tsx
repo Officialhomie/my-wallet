@@ -284,3 +284,4 @@ export function SimulationConfig({ className }: SimulationConfigProps) {
     </div>
   );
 }
+

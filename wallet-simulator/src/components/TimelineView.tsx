@@ -221,3 +221,4 @@ export function TimelineView({ className, maxHeight = 'h-64' }: TimelineViewProp
     </div>
   );
 }
+

@@ -392,3 +392,4 @@ export function ResultInspector({ className }: ResultInspectorProps) {
     </div>
   );
 }
+
