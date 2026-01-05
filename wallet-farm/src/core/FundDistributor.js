@@ -278,9 +278,21 @@ export class FundDistributor {
     const wallets = this.walletFarm.wallets;
     const insufficientWallets = [];
     const minRequired = parseFloat(minimumRequired);
+    let connectionError = null;
+
+    // Check if wallets are connected to the chain
+    const firstWallet = wallets.values().next().value;
+    if (firstWallet && !firstWallet.connectedChains.has(chainName)) {
+      connectionError = `Wallets are not connected to chain: ${chainName}. Please ensure wallets are connected to this chain before verifying balances.`;
+      throw new Error(connectionError);
+    }
 
     if (tokenAddress && tokenABI) {
       // Check ERC-20 token balances
+      if (!this.fundingWallet || !this.fundingWallet.provider) {
+        throw new Error('Funding wallet not configured. Please configure a funding wallet first.');
+      }
+
       const token = new ethers.Contract(tokenAddress, tokenABI, this.fundingWallet.provider);
       const decimals = await token.decimals();
 
@@ -317,6 +329,20 @@ export class FundDistributor {
       // Check native token balances
       for (const [index, walletData] of wallets) {
         try {
+          // Verify wallet is connected to chain before checking balance
+          if (!walletData.connectedChains.has(chainName)) {
+            insufficientWallets.push({
+              index,
+              address: walletData.address,
+              currentBalance: 0,
+              required: minRequired,
+              deficit: minRequired,
+              tokenType: 'native',
+              error: `Wallet not connected to chain: ${chainName}`
+            });
+            continue;
+          }
+
           const balance = await this.walletFarm.getWalletBalance(index, chainName);
           const balanceFormatted = parseFloat(ethers.formatEther(balance));
 
