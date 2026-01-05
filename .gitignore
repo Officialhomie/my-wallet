@@ -17,8 +17,40 @@ WALLET_FARM_SPECIFICATION.md
 .env.local
 .env.development
 .env.production
+.env.*.local
 config.json
 secrets.json
+*.secret
+*.key
+*.pem
+*.p12
+*.pfx
+
+# API Keys and credentials
+**/api-keys.json
+**/credentials.json
+**/secrets.json
+**/*secret*
+**/*credential*
+
+# Wallet and blockchain sensitive data
+**/*mnemonic*
+**/*seed*
+**/*private-key*
+**/*wallet*.json
+**/wallets.json
+
+# Railway and deployment configs (may contain secrets)
+railway.json
+.railway/
+deploy.json
+deploy.config.json
+
+# Lock files (optional - some teams commit these, others don't)
+# Uncomment if you don't want to commit lock files
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
 
 # Node.js
 node_modules/
