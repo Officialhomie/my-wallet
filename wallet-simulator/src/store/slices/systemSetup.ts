@@ -220,10 +220,11 @@ export const systemSetupSlice = (set: (partial: any) => void, get: () => SystemS
 
   // Fund distribution actions
   configureFundingWallet: async (privateKey: string, network: string) => {
+    // Don't set isLoading here - it's shared and affects WalletFarmInfo
+    // The FundDistributor component can manage its own loading state
     set((state: SystemSetupSlice) => ({
       systemSetup: {
         ...state.systemSetup,
-        isLoading: true,
         error: null,
         distributionError: null,
       }
@@ -240,7 +241,6 @@ export const systemSetupSlice = (set: (partial: any) => void, get: () => SystemS
             balance: result.balance,
             network: result.network,
           },
-          isLoading: false,
           error: null,
         }
       }));
@@ -250,7 +250,6 @@ export const systemSetupSlice = (set: (partial: any) => void, get: () => SystemS
         systemSetup: {
           ...state.systemSetup,
           error: errorMessage,
-          isLoading: false,
         }
       }));
       throw error;
