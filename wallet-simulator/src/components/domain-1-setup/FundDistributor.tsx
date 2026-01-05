@@ -300,10 +300,16 @@ export function FundDistributor() {
 
       {/* Verification Results Section */}
       {verificationResult && (
-        <section className="bg-card rounded-md border border-border p-4 sm:p-6 space-y-2">
+        <section className="bg-card rounded-md border border-border p-3 sm:p-6 space-y-2 rounded-[5px]">
           <h4 className="font-medium text-foreground">Balance Verification</h4>
           {verificationResult.error ? (
-            <p className="text-sm text-destructive">{verificationResult.error}</p>
+            <div className="space-y-2">
+              <p className="text-sm text-destructive font-medium">Verification Failed</p>
+              <p className="text-sm text-destructive">{verificationResult.error}</p>
+              {verificationResult.details && (
+                <p className="text-xs text-muted-foreground">{verificationResult.details}</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -311,7 +317,7 @@ export function FundDistributor() {
                   {verificationResult.allSufficient ? 'All Sufficient' : 'Some Insufficient'}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  Checked {verificationResult.checkedWallets} wallets
+                  Checked {verificationResult.checkedWallets || verificationResult.totalWallets || 0} wallets
                 </span>
               </div>
               {verificationResult.insufficientWallets && verificationResult.insufficientWallets.length > 0 && (
@@ -323,13 +329,20 @@ export function FundDistributor() {
                     {verificationResult.insufficientWallets.slice(0, 5).map((w: any, i: number) => (
                       <div key={i} className="flex justify-between">
                         <span className="font-mono">Wallet #{w.index}</span>
-                        <span>{w.currentBalance} / {w.required} {verificationResult.tokenType === 'ERC20' ? 'tokens' : 'ETH'}</span>
+                        <span>{w.currentBalance?.toFixed(6) || w.currentBalance} / {w.required} {verificationResult.tokenType === 'ERC20' ? 'tokens' : 'ETH'}</span>
                       </div>
                     ))}
                     {verificationResult.insufficientWallets.length > 5 && (
                       <p className="text-muted-foreground">...and {verificationResult.insufficientWallets.length - 5} more</p>
                     )}
                   </div>
+                </div>
+              )}
+              {verificationResult.allSufficient && (
+                <div className="bg-success/10 border border-success rounded-md p-3">
+                  <p className="text-sm font-medium text-success">
+                    ✅ All wallets have sufficient balance ({verificationResult.minimumRequired} {verificationResult.tokenType === 'ERC20' ? 'tokens' : 'ETH'} minimum)
+                  </p>
                 </div>
               )}
             </div>
