@@ -1,25 +1,28 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
+import type { Metadata } from 'next';
+import { Unbounded } from 'next/font/google';
+import './globals.css';
+import { Navbar } from '@/components/shared/Navbar';
 
-const inter = Inter({ subsets: ['latin'] })
+const unbounded = Unbounded({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Wallet Farm Visual Simulator',
-  description: 'Developer console for testing smart contracts with realistic behavioral simulations',
-}
+  title: 'Wallet Farm Simulator',
+  description: 'Simulate wallet behavior across multiple networks',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        {children}
+      <body className={unbounded.className}>
+        <Navbar />
+        <main className="min-h-screen bg-background">
+          {children}
+        </main>
       </body>
     </html>
-  )
+  );
 }
-
