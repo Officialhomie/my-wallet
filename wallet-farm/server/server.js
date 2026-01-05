@@ -490,26 +490,31 @@ app.get('/api/funding/verify/:network', async (req, res) => {
     const minBal = parseFloat(minBalance).toFixed(8);
     const verificationResult = await fundDistributor.verifyBalances(network, minBal);
 
+    // Map FundDistributor response to expected format
+    const totalWallets = verificationResult.checkedWallets;
+    const insufficientCount = verificationResult.insufficientWallets.length;
+    const sufficientCount = totalWallets - insufficientCount;
+
     res.json({
       network,
       minBalance: minBal,
-      allFunded: verificationResult.allFunded,
-      funded: verificationResult.funded,
-      unfunded: verificationResult.unfunded,
-      totalWallets: verificationResult.totalWallets,
-      details: verificationResult.details.map((detail) => ({
-        walletIndex: detail.walletIndex,
-        address: detail.address,
-        balance: detail.balance,
-        sufficient: detail.sufficient,
-        network
-      }))
+      allSufficient: verificationResult.allSufficient,
+      insufficientWallets: verificationResult.insufficientWallets,
+      checkedWallets: verificationResult.checkedWallets,
+      minimumRequired: verificationResult.minimumRequired,
+      tokenType: verificationResult.tokenType || 'native',
+      // Legacy fields for compatibility
+      allFunded: verificationResult.allSufficient,
+      funded: sufficientCount,
+      unfunded: insufficientCount,
+      totalWallets: totalWallets
     });
   } catch (error) {
     console.error('Error verifying balances:', error);
     res.status(500).json({
-      error: 'Failed to verify balances',
-      details: error.message
+      error: error.message || 'Failed to verify balances',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
