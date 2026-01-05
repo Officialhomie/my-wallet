@@ -77,7 +77,7 @@ export function WalletSelector() {
             <label className="block text-sm font-medium text-foreground mb-3">
               Select Wallets ({(walletSelection.multipleWallets || []).length} selected)
             </label>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
               {Array.from({ length: walletCount }, (_, i) => {
                 const isSelected = (walletSelection.multipleWallets || []).includes(i);
                 const address = walletAddresses[i];
