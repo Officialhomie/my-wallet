@@ -4,6 +4,7 @@
 import { NetworkSelector } from '@/components/domain-1-setup/NetworkSelector';
 import { WalletFarmInfo } from '@/components/domain-1-setup/WalletFarmInfo';
 import { ContractRegistry } from '@/components/domain-1-setup/ContractRegistry';
+import { FundDistributor } from '@/components/domain-1-setup/FundDistributor';
 import { Card } from '@/components/shared/Card';
 import { Button } from '@/components/shared/Button';
 import Link from 'next/link';
@@ -30,6 +31,10 @@ export default function SetupPage() {
 
       <Card title="Contract Registry">
         <ContractRegistry />
+      </Card>
+
+      <Card title="Fund Distribution">
+        <FundDistributor />
       </Card>
 
       <div className="flex justify-end">
