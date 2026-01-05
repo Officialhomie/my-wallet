@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/store';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/shared/Button';
 
 export function WalletFarmInfo() {
@@ -19,7 +19,7 @@ export function WalletFarmInfo() {
   const [inputWalletCount, setInputWalletCount] = useState(walletCount.toString());
 
   // Only fetch on mount - using useRef to prevent infinite loops
-  const hasFetchedRef = React.useRef(false);
+  const hasFetchedRef = useRef(false);
   
   useEffect(() => {
     if (!hasFetchedRef.current) {
@@ -29,11 +29,17 @@ export function WalletFarmInfo() {
   }, []); // Empty dependency array - only run on mount
 
   // Refetch when walletCount changes (user changes the count)
+  // Using a separate ref to track previous walletCount to avoid unnecessary refetches
+  const prevWalletCountRef = useRef(walletCount);
+  
   useEffect(() => {
-    if (hasFetchedRef.current && walletCount) {
+    // Only refetch if walletCount actually changed (not on initial mount)
+    if (hasFetchedRef.current && walletCount !== prevWalletCountRef.current) {
       fetchWalletFarmInfo();
+      prevWalletCountRef.current = walletCount;
     }
-  }, [walletCount]); // Only depend on walletCount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletCount]); // Only depend on walletCount - fetchWalletFarmInfo is stable from Zustand
 
   const handleWalletCountChange = (value: string) => {
     setInputWalletCount(value);
