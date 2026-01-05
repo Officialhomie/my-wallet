@@ -38,25 +38,29 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Status colors for simulation
+        // Enhanced status colors with new theme
         success: {
-          DEFAULT: '#10b981',
+          DEFAULT: '#06d6a0',
           foreground: '#ffffff',
         },
         warning: {
-          DEFAULT: '#f59e0b',
-          foreground: '#ffffff',
+          DEFAULT: '#ffd166',
+          foreground: '#1a1a2e',
         },
         error: {
-          DEFAULT: '#ef4444',
+          DEFAULT: '#ef476f',
           foreground: '#ffffff',
         },
         rateLimited: {
-          DEFAULT: '#8b5cf6',
+          DEFAULT: '#118ab2',
           foreground: '#ffffff',
         },
         pending: {
-          DEFAULT: '#6b7280',
+          DEFAULT: '#073b4c',
+          foreground: '#ffffff',
+        },
+        info: {
+          DEFAULT: '#00bbf9',
           foreground: '#ffffff',
         },
       },
