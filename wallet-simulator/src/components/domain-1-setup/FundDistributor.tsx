@@ -1,7 +1,7 @@
 'use client';
 
 import { useStore } from '@/store';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/shared/Button';
 import { Badge } from '@/components/shared/Badge';
 import { Card } from '@/components/shared/Card';
@@ -29,16 +29,17 @@ export function FundDistributor() {
   const [distributionStrategy, setDistributionStrategy] = useState<'equal' | 'weighted' | 'random' | 'exponential' | 'linear'>('equal');
   const [tokenType, setTokenType] = useState<'native' | 'erc20'>('native');
   const [verificationResult, setVerificationResult] = useState<any>(null);
+  const [isConfiguringWallet, setIsConfiguringWallet] = useState(false);
 
-  // Only fetch funding wallet on mount, not on every render
-  const [hasFetchedFundingWallet, setHasFetchedFundingWallet] = useState(false);
+  // Only fetch funding wallet on mount - using useRef to prevent infinite loops
+  const hasFetchedFundingWalletRef = useRef(false);
   
   useEffect(() => {
-    if (!hasFetchedFundingWallet) {
+    if (!hasFetchedFundingWalletRef.current) {
       fetchFundingWallet();
-      setHasFetchedFundingWallet(true);
+      hasFetchedFundingWalletRef.current = true;
     }
-  }, [hasFetchedFundingWallet, fetchFundingWallet]);
+  }, []); // Empty dependency array - only run on mount
 
   // Update funding network when selected network changes (only if wallet not configured)
   useEffect(() => {
@@ -49,12 +50,15 @@ export function FundDistributor() {
 
   const handleConfigureFundingWallet = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsConfiguringWallet(true);
     try {
       await configureFundingWallet(privateKey, fundingNetwork);
       setShowFundingWalletForm(false);
       setPrivateKey('');
     } catch (error) {
       // Error handled in store
+    } finally {
+      setIsConfiguringWallet(false);
     }
   };
 
@@ -147,14 +151,22 @@ export function FundDistributor() {
                   <option value="optimism-sepolia">Optimism Sepolia</option>
                 </select>
               </div>
-              <div className="flex gap-2">
-                <Button type="submit" variant="primary">
-                  Configure
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => setShowFundingWalletForm(false)}>
-                  Cancel
-                </Button>
-              </div>
+                <div className="flex gap-2">
+                  <Button type="submit" variant="primary" disabled={isConfiguringWallet}>
+                    {isConfiguringWallet ? 'Configuring...' : 'Configure'}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={() => {
+                      setShowFundingWalletForm(false);
+                      setPrivateKey('');
+                    }}
+                    disabled={isConfiguringWallet}
+                  >
+                    Cancel
+                  </Button>
+                </div>
             </form>
           )}
         </section>
