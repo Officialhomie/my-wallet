@@ -1,5 +1,5 @@
 {
-  "name": "wallet-farm",
+  "name": "tvrch-core",
   "version": "1.0.0",
   "description": "HD Wallet Farm for EVM Smart Contract Testing & Interaction Simulation",
   "main": "src/index.js",
@@ -40,7 +40,7 @@
     "blockchain",
     "ethereum"
   ],
-  "author": "Wallet Farm Team",
+  "author": "Tvrch Team",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",
