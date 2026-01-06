@@ -1,5 +1,5 @@
 {
-    "name": "wallet-farm",
+    "name": "tvrch",
     "version": "1.0.0",
     "description": "HD Wallet Farm for EVM Smart Contract Testing & Interaction Simulation",
     "main": "index.js",
@@ -26,7 +26,7 @@
       "hardhat",
       "ethers"
     ],
-    "author": "Homie",
+    "author": "Tvrch Team",
     "license": "MIT",
     "devDependencies": {
       "@nomicfoundation/hardhat-toolbox": "^4.0.0",
