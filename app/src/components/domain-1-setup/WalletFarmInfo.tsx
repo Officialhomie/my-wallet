@@ -198,7 +198,7 @@ export function WalletFarmInfo() {
             </div>
           </div>
 
-          {/* Mnemonic Preview */}
+          {/* Seed Phrase Status */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-foreground">Seed Phrase</span>
@@ -211,11 +211,11 @@ export function WalletFarmInfo() {
             </div>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-muted-foreground">
-                All wallets are deterministically derived from a secure seed phrase.
+                Seed phrase is securely stored server-side and never exposed to the client.
               </p>
               <div className="flex items-center space-x-1 text-xs text-green-600">
                 <span>🔐</span>
-                <span>Secure derivation</span>
+                <span>Secure</span>
               </div>
             </div>
           </div>
