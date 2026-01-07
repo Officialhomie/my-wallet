@@ -1,6 +1,6 @@
 // Domain 6: Result Inspection Store Slice
 
-import { ResultInspectionState, SimulationSummary, ArchetypeDistribution, TransactionRecord, TransactionStatus, ArchetypeName } from '@/types/domain-6';
+import { ResultInspectionState, SimulationSummary, ArchetypeDistribution, TransactionRecord, TransactionStatus, ArchetypeName, SimulationStatus } from '@/types/domain-6';
 import { api } from '@/lib/api';
 
 export interface ResultInspectionSlice {
@@ -229,7 +229,7 @@ export const resultInspectionSlice = (set: (partial: any) => void, get: () => Re
 
       const summary: SimulationSummary = {
         simulationId,
-        status: simulation.status === 'completed' ? 'completed' : simulation.status === 'failed' ? 'failed' : 'running',
+        status: (simulation.status === 'completed' ? 'completed' : simulation.status === 'failed' ? 'failed' : 'running') as SimulationStatus,
         startedAt: backendResults.startTime || new Date(simulation.startedAt).getTime(),
         completedAt: backendResults.endTime || (simulation.completedAt ? new Date(simulation.completedAt).getTime() : Date.now()),
         duration: backendResults.duration || (backendResults.endTime - backendResults.startTime) || 0,

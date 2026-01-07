@@ -5,7 +5,7 @@ import { ArchetypeName } from './domain-2';
 // Re-export for convenience
 export type { ArchetypeName };
 
-export type SimulationStatus = 'completed' | 'failed' | 'cancelled';
+export type SimulationStatus = 'completed' | 'failed' | 'cancelled' | 'running';
 export type TransactionStatus = 'success' | 'failure' | 'pending';
 
 export interface SimulationContract {
