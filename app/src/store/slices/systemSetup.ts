@@ -103,7 +103,7 @@ export const systemSetupSlice = (set: (partial: any) => void, get: () => SystemS
           ...state.systemSetup,
           walletFarmInfo: {
             totalWallets: data.wallets.length,
-            mnemonicPreview: data.mnemonic.split(' ').slice(0, 4).join(' ') + '...',
+            mnemonicPreview: '*** *** *** *** ...', // Mnemonic is not exposed for security
             addresses: data.wallets.map((w: { address: string }) => w.address), // Store all addresses
           },
           isLoading: false,
