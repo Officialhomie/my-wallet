@@ -1,16 +1,16 @@
-# Nixpacks Configuration for Wallet Farm Backend
-# This configuration operates from wallet-farm/ subdirectory
+# Nixpacks Configuration for TVRCH Backend
+# This configuration operates from core/ subdirectory
 
 [phases.setup]
 nixPkgs = ["nodejs_18"]
 
 [phases.install]
-# Install production dependencies from wallet-farm subdirectory
-cmds = ["cd wallet-farm && npm ci --omit=dev"]
+# Install production dependencies from core subdirectory
+cmds = ["cd core && npm ci --omit=dev"]
 
 [phases.build]
 # Skip build phase to prevent duplicate npm ci
 cmds = []
 
 [start]
-cmd = "cd wallet-farm && npm run server"
+cmd = "cd core && npm run server"

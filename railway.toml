@@ -1,8 +1,8 @@
-# Railway Configuration for Wallet Farm Backend
+# Railway Configuration for TVRCH Backend
 # Deploy configuration - build is handled by nixpacks.toml
 
 [deploy]
-startCommand = "cd wallet-farm && npm run server"
+startCommand = "cd core && npm run server"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
