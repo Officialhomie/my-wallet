@@ -1,6 +1,5 @@
 // API Client
 
-import { ethers } from 'ethers';
 import { Contract } from '@/types/domain-1';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -40,29 +39,21 @@ class ApiClient {
     }
   }
 
-  // Generate wallets from actual mnemonic (matching backend)
-  private getMockWalletStats(count: number = 10) {
-    // Use the same mnemonic as the backend
-    const mnemonic = 'fold aspect sponsor image lemon opera story excess inject heavy glide route';
-
-    const wallets = [];
-    for (let i = 0; i < count; i++) {
-      // Derive HD wallet using BIP44 path for Ethereum: m/44'/60'/0'/0/i
-      const wallet = ethers.HDNodeWallet.fromPhrase(mnemonic, undefined, `m/44'/60'/0'/0/${i}`);
-      wallets.push({ address: wallet.address });
-    }
-
-    return {
-      wallets,
-      mnemonic: 'fold aspect sponsor image lemon opera story excess inject heavy glide route',
-    };
-  }
-
   // Domain 1: System Setup
   async getWalletStats(count: number = 10) {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
-    return this.getMockWalletStats(count);
+    try {
+      // Call backend API to get wallet information
+      // Backend uses TEST_MNEMONIC from environment variable
+      const response = await this.request(`/api/wallets?count=${count}`);
+      
+      // Transform backend response to frontend format
+      return {
+        wallets: response.wallets || [],
+      };
+    } catch (error: any) {
+      console.error('Failed to fetch wallet stats from backend:', error);
+      throw new Error('Failed to fetch wallet information. Make sure the backend is running.');
+    }
   }
 
   async getContracts(): Promise<Contract[]> {
