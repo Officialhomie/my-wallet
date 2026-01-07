@@ -250,12 +250,20 @@ app.get('/api/wallets', (req, res) => {
       }
     }
 
+    // Support count parameter to limit number of wallets returned
+    const count = req.query.count ? parseInt(req.query.count, 10) : undefined;
+    
     const walletData = walletFarm.exportWalletData();
-    const wallets = walletData.map((wallet) => ({
+    let wallets = walletData.map((wallet) => ({
       index: wallet.index,
       address: wallet.address,
       path: wallet.derivationPath
     }));
+
+    // Limit to requested count if specified
+    if (count && count > 0) {
+      wallets = wallets.slice(0, count);
+    }
 
     res.json({ wallets });
   } catch (error) {
